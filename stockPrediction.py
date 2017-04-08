@@ -1,23 +1,3 @@
-import numpy as np
-import math
-from math import log
-from sklearn import metrics,preprocessing,cross_validation
-from sklearn.feature_extraction.text import TfidfVectorizer
-import sklearn.linear_model as lm
-import sklearn.decomposition
-from sklearn.metrics import mean_squared_error
-from sklearn.neighbors import RadiusNeighborsRegressor, KNeighborsRegressor
-from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier, ExtraTreesClassifier
-import pandas as p
-from time import gmtime, strftime
-import scipy
-import sys
-from string import punctuation
-import time
-from scipy import sparse
-from matplotlib import *
-from itertools import combinations
-import operator
 def avgRank(x):
     sortX = sorted(zip(x,range(len(x))))
     r = [0 for k in x]
@@ -56,42 +36,49 @@ def normaliseTenDays(stocks):
     print "Data is being loaded"
 train = np.array(p.read_table('./training.csv', sep = ","))
 test = np.array(p.read_table('./test.csv', sep = ","))
-X_test = normaliseTenDays(test[:,range(17, 48)])
-n_windows = 490
-windows = range(n_windows)
-X_windows = [train[:,range(16 + 5*w, 47 + 5*w)] for w in windows]
-X_windows_normalized = [normaliseTenDays(w) for w in X_windows]
-X = np.vstack(X_windows_normalized)
-y_stockdata = np.vstack([train[:, [46 + 5*w, 49 + 5*w]] for w in windows])
-y = (y_stockdata[:,1] - y_stockdata[:,0] > 0) + 0
-X_test = X_test[:,[0, 3, 5, 8, 10, 13, 15, 18, 20, 23, 25, 28, 30]]
-X = X[:,[0, 3, 5, 8, 10, 13, 15, 18, 20, 23, 25, 28, 30]]
+xTestStockData = normaliseTenDays(test[:,range(2, 48)]) # load in test data
+xTestStockIndicator = np.vstack((np.identity(94)[:,range(93)] for i in range(25)))
+xTest = xTestStockData
+nWindows = 490
+windows = range(nWindows)
+xWindows = [train[:,range(1 + 5*w, 47 + 5*w)] for w in windows]
+xWindowsNormalised = [normaliseTenDays(w) for w in xWindows]
+xStockData = np.vstack(xWindowsNormalised)
+xStockIndicator = np.vstack((np.identity(94)[:,range(93)] for i in range(nWindows)))
+X = xStockData
+yStockData = np.vstack([train[:, [46 + 5*w, 49 + 5*w]] for w in windows])
+y = (yStockData[:,1] - yStockData[:,0] > 0) + 0
 print "Step completed"
-model_ridge = lm.LogisticRegression(penalty='l2', dual=False, tol=0.0001, C=9081)
-model_randomforest = RandomForestClassifier(n_estimators = 200)
-pred_ridge = []
-pred_randomforest = []
-new_Y = []
-for i in range(10):
-    indxs = np.arange(i, X.shape[0], 10)
-    indxs_to_fit = list(set(range(X.shape[0])) - set(np.arange(i, X.shape[0], 10)))
-    pred_ridge = pred_ridge + list(model_ridge.fit(X[indxs_to_fit,:], y[indxs_to_fit,:]).predict_proba(X[indxs,:])[:,1])
-    pred_randomforest = pred_randomforest + list(model_randomforest.fit(X[indxs_to_fit,:], y[indxs_to_fit,:]).predict_proba(X[indxs,:])[:,1])
-    new_Y = new_Y + list(y[indxs,:])
-new_X = np.hstack((np.array(pred_ridge).reshape(len(pred_ridge), 1), np.array(pred_randomforest).reshape(len(pred_randomforest), 1)))
-print new_X
-new_Y = np.array(new_Y).reshape(len(new_Y), 1)
-model_suggested = lm.LogisticRegression()
-print np.mean(cross_validation.cross_val_score(model_suggested, new_X, new_Y.reshape(new_Y.shape[0]), cv=5, scoring = areaUnderCharacter_scorer))
-model_suggested.fit(new_X, new_Y.reshape(new_Y.shape[0]))
+print "Models prepartion"
+modelname = "lasso"
+if modelname == "lasso":
+    C = np.linspace(300, 5000, num = 10)[::-1]
+    models = [lm.LogisticRegression(penalty = "l1", C = c) for c in C]
+if modelname == "sgd":
+    C = np.linspace(0.00005, .01, num = 5)
+    models = [lm.SGDClassifier(loss = "log", penalty = "l2", alpha = c, warm_start = False) for c in C]
+if modelname == "ridge":
+    C = np.linspace(300, 5000, num = 10)[::-1]
+    models = [lm.LogisticRegression(penalty = "l2", C = c) for c in C]
+if modelname == "randomforest":
+    C = np.linspace(50, 300, num = 10)
+    models = [RandomForestClassifier(n_estimators = int(c)) for c in C]
+print "Calculating scores"
+cv_scores = [0] * len(models)
+for i, model in enumerate(models):
+    cv_scores[i] = np.mean(cross_validation.cross_val_score(model, X, y, cv=5, scoring = areaUnderCharacter))
+    print " (%d/%d) C = %f: CV = %f" % (i + 1, len(C), C[i], cv_scores[i])
+best = cv_scores.index(max(cv_scores))
+bestModel = models[best]
+bestCV = cv_scores[best]
+bestC = C[best]
+print "Best %f: %f" % (bestC, bestCV)
+print "Training"
+bestModel.fit(X, y)
 print "Prediction"
-pred_ridge_test = model_ridge.fit(X, y).predict_proba(X_test)[:,1]
-pred_randomforest_test = model_randomforest.fit(X, y).predict_proba(X_test)[:,1]
-new_X_test = np.hstack((np.array(pred_ridge_test).reshape(len(pred_ridge_test), 1), np.array(pred_randomforest_test).reshape(len(pred_randomforest_test), 1)))
-pred = model_suggested.predict_proba(new_X_test)[:,1]
+pred = bestModel.predict_proba(xTest)[:,1]
 testfile = p.read_csv('./test.csv', sep=",", na_values=['?'], index_col=[0,1])
-testindices = [100 * D + StId for (D, StId) in testfile.index]
+stestindices = [100 * D + StId for (D, StId) in testfile.index]
 pred_df = p.DataFrame(np.vstack((testindices, pred)).transpose(), columns=["Id", "Prediction"])
-pred_df.to_csv('./predictions/' + 'suggested' + '/' + 'suggested' + ' ' + strftime("%m-%d %X") + ".csv", index = False)
-print "Test file created"
-model_suggested.coef_
+pred_df.to_csv('./predictions/' + modelname + '/' + modelname + ' ' + strftime("%m-%d %X") + " C-" + str(round(bestC,4)) + " CV-" + str(round(bestCV, 4)) + ".csv", index = False)
+print "Done"
