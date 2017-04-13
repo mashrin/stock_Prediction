@@ -1,3 +1,5 @@
+#import libraries from includeList.
+
 def avgRank(x):
     sortX = sorted(zip(x,range(len(x))))
     r = [0 for k in x]
@@ -26,14 +28,18 @@ def areaUnderCharacter_scorer(estimator, X, y):
     return areaUnderCharacter(y, predicted)
 def normaliseTenDays(stocks):
     def columnProcess(i):
+        if operator.mod(i, 5) == 1:
+            return stocks[:,i] * 0
+        if operator.mod(i, 5) == 2:
+            return stocks[:,i] * 0
         if operator.mod(i, 5) == 4:
-            return np.log(stocks[:,i] + 1)
+            return stocks[:,i] * 0
         else:
             return stocks[:,i] / stocks[:,0]
     n = stocks.shape[0]
-    stocks_dat =  np.array([ columnProcess(i) for i in range(31)]).transpose()
+    stocks_dat =  np.array([ columnProcess(i) for i in range(46)]).transpose()
     return stocks_dat
-    print "Data is being loaded"
+print "Data is being loaded"
 train = np.array(p.read_table('./training.csv', sep = ","))
 test = np.array(p.read_table('./test.csv', sep = ","))
 xTestStockData = normaliseTenDays(test[:,range(2, 48)]) # load in test data
