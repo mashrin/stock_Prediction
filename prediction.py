@@ -84,7 +84,7 @@ bestModel.fit(X, y)
 print "Prediction"
 pred = bestModel.predict_proba(xTest)[:,1]
 testfile = p.read_csv('./test.csv', sep=",", na_values=['?'], index_col=[0,1])
-stestindices = [100 * D + StId for (D, StId) in testfile.index]
+testindices = [100 * D + StId for (D, StId) in testfile.index]
 pred_df = p.DataFrame(np.vstack((testindices, pred)).transpose(), columns=["Id", "Prediction"])
 pred_df.to_csv('./predictions/' + modelname + '/' + modelname + ' ' + strftime("%m-%d %X") + " C-" + str(round(bestC,4)) + " CV-" + str(round(bestCV, 4)) + ".csv", index = False)
 print "Done"
