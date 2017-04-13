@@ -66,7 +66,7 @@ if modelname == "randomforest":
 print "Calculating scores"
 cv_scores = [0] * len(models)
 for i, model in enumerate(models):
-    cv_scores[i] = np.mean(cross_validation.cross_val_score(model, X, y, cv=5, scoring = areaUnderCharacter))
+    cv_scores[i] = np.mean(cross_validation.cross_val_score(model, X, y, cv=5, scoring = areaUnderCharacter_scorer))
     print " (%d/%d) C = %f: CV = %f" % (i + 1, len(C), C[i], cv_scores[i])
 best = cv_scores.index(max(cv_scores))
 bestModel = models[best]
