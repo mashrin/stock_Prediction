@@ -9,7 +9,8 @@ from string import punctuation
 import time
 import sklearn.linear_model as lm
 import sklearn.decomposition
-from sklearn import metrics, preprocessing, cross_validation
+from sklearn import metrics, preprocessing
+from sklearn.model_selection import cross_val_score
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import mean_squared_error
 from sklearn.neighbors import RadiusNeighborsRegressor, KNeighborsRegressor
@@ -80,7 +81,7 @@ print("Models prepartion")
 modelname = "lasso"
 if modelname == "lasso":
     C = np.linspace(300, 5000, num = 10)[::-1]
-    models = [lm.LogisticRegression(penalty = "l1", C = c) for c in C]
+    models = [lm.LogisticRegression(penalty = "l1", C = c, solver='liblinear') for c in C]
 if modelname == "sgd":
     C = np.linspace(0.00005, .01, num = 5)
     models = [lm.SGDClassifier(loss = "log", penalty = "l2", alpha = c, warm_start = False) for c in C]
@@ -93,7 +94,7 @@ if modelname == "randomforest":
 print("Calculating scores")
 cv_scores = [0] * len(models)
 for i, model in enumerate(models):
-    cv_scores[i] = np.mean(cross_validation.cross_val_score(model, X, y, cv=5, scoring = areaUnderCharacter_scorer))
+    cv_scores[i] = np.mean(cross_val_score(model, X, y, cv=5, scoring = areaUnderCharacter_scorer))
     print(" (%d/%d) C = %f: CV = %f" % (i + 1, len(C), C[i], cv_scores[i]))
 best = cv_scores.index(max(cv_scores))
 bestModel = models[best]
