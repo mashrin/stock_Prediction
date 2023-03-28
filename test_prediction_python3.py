@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from test_prediction_python3 import avgRank, areaUnderCharacter, areaUnderCharacter_scorer, normaliseTenDays
+from prediction_python3 import avgRank, areaUnderCharacter, areaUnderCharacter_scorer, normaliseTenDays
 
 def test_avgRank():
     assert avgRank([50, 30, 40]) == [3, 1, 2]
